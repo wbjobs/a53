@@ -11,20 +11,103 @@ import {
   Space,
   Tag,
   Row,
-  Col
+  Col,
+  Progress,
+  Alert
 } from 'antd'
 import {
   ArrowLeftOutlined,
   SaveOutlined,
   UploadOutlined,
-  CameraOutlined
+  CameraOutlined,
+  CheckCircleOutlined,
+  WarningOutlined,
+  ReloadOutlined
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import api, { getPhotoUrl } from '../utils/api'
+import api, { getPhotoUrl, uploadPhotoWithRetry } from '../utils/api'
 import dayjs from 'dayjs'
 
 const { TextArea } = Input
 const { Option } = Select
+
+const PhotoUploadCard = ({ title, type, photoPath, preview, uploading, progress, uploadError, onUpload, onRetry }) => (
+  <Card
+    size="small"
+    title={title}
+    extra={
+      <Space>
+        {uploadError && (
+          <Button
+            icon={<ReloadOutlined />}
+            size="small"
+            onClick={onRetry}
+            danger
+          >
+            重试
+          </Button>
+        )}
+        <Upload showUploadList={false} beforeUpload={(file) => { onUpload(file); return false }}>
+          <Button
+            icon={<UploadOutlined />}
+            loading={uploading}
+            type="primary"
+            size="small"
+          >
+            {uploading ? '上传中...' : '上传照片'}
+          </Button>
+        </Upload>
+      </Space>
+    }
+    style={{ minHeight: 280 }}
+  >
+    {uploading && (
+      <Progress
+        percent={progress}
+        status={progress < 100 ? 'active' : 'success'}
+        style={{ marginBottom: 12 }}
+      />
+    )}
+    {uploadError && (
+      <Alert
+        message="上传失败"
+        description={uploadError}
+        type="error"
+        showIcon
+        icon={<WarningOutlined />}
+        style={{ marginBottom: 12 }}
+        action={
+          <Button size="small" onClick={onRetry} icon={<ReloadOutlined />}>
+            重试
+          </Button>
+        }
+      />
+    )}
+    {preview || photoPath ? (
+      <div style={{ textAlign: 'center' }}>
+        <img
+          src={preview || getPhotoUrl(photoPath)}
+          alt={title}
+          style={{ width: '100%', maxHeight: 200, objectFit: 'contain' }}
+        />
+        {!uploading && !uploadError && (
+          <Tag color="success" style={{ marginTop: 8 }} icon={<CheckCircleOutlined />}>
+            文件校验通过
+          </Tag>
+        )}
+      </div>
+    ) : (
+      <div style={{
+        textAlign: 'center',
+        color: '#999',
+        padding: '40px 0',
+        fontSize: 14
+      }}>
+        {uploading ? '正在上传并校验...' : '暂无照片'}
+      </div>
+    )}
+  </Card>
+)
 
 const NewRestoration = () => {
   const [form] = Form.useForm()
@@ -38,6 +121,12 @@ const NewRestoration = () => {
   const [afterPreview, setAfterPreview] = useState('')
   const [uploadingBefore, setUploadingBefore] = useState(false)
   const [uploadingAfter, setUploadingAfter] = useState(false)
+  const [beforeProgress, setBeforeProgress] = useState(0)
+  const [afterProgress, setAfterProgress] = useState(0)
+  const [beforeError, setBeforeError] = useState('')
+  const [afterError, setAfterError] = useState('')
+  const [currentBeforeFile, setCurrentBeforeFile] = useState(null)
+  const [currentAfterFile, setCurrentAfterFile] = useState(null)
 
   const preselectedRelic = location.state?.relicId
 
@@ -57,32 +146,67 @@ const NewRestoration = () => {
   }, [preselectedRelic, form])
 
   const handleUploadPhoto = async (file, type) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('prefix', type)
+    const isImage = file.type.startsWith('image/')
+    if (!isImage) {
+      message.error('只能上传图片文件')
+      return
+    }
+    const isLt50M = file.size / 1024 / 1024 < 50
+    if (!isLt50M) {
+      message.error('图片大小不能超过50MB')
+      return
+    }
+
+    if (type === 'before') {
+      setUploadingBefore(true)
+      setBeforeProgress(0)
+      setBeforeError('')
+      setCurrentBeforeFile(file)
+    } else {
+      setUploadingAfter(true)
+      setAfterProgress(0)
+      setAfterError('')
+      setCurrentAfterFile(file)
+    }
 
     try {
-      if (type === 'before') {
-        setUploadingBefore(true)
-      } else {
-        setUploadingAfter(true)
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(1)
+      if (parseFloat(fileSizeMB) > 5) {
+        message.info({ content: `文件较大(${fileSizeMB}MB)，使用分片上传，请耐心等待...`, duration: 5 })
       }
 
-      const response = await api.post('/photos/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const data = await uploadPhotoWithRetry(
+        file,
+        type,
+        (percent) => {
+          if (type === 'before') {
+            setBeforeProgress(percent)
+          } else {
+            setAfterProgress(percent)
+          }
+        }
+      )
 
-      const path = response.data.path
       if (type === 'before') {
-        setBeforePhotoPath(path)
+        setBeforePhotoPath(data.path)
         setBeforePreview(URL.createObjectURL(file))
       } else {
-        setAfterPhotoPath(path)
+        setAfterPhotoPath(data.path)
         setAfterPreview(URL.createObjectURL(file))
       }
-      message.success('照片上传成功')
+      message.success({ content: '照片上传成功，文件完整性校验通过', duration: 3 })
     } catch (error) {
-      message.error('照片上传失败')
+      const errorMsg = error.response?.data?.error || error.message || '上传失败'
+      if (errorMsg.includes('完整性校验失败')) {
+        message.error({ content: '文件完整性校验失败，上传的文件可能已损坏，请重新上传', duration: 5 })
+      } else {
+        message.error({ content: `照片上传失败: ${errorMsg}`, duration: 5 })
+      }
+      if (type === 'before') {
+        setBeforeError(errorMsg)
+      } else {
+        setAfterError(errorMsg)
+      }
     } finally {
       if (type === 'before') {
         setUploadingBefore(false)
@@ -92,43 +216,18 @@ const NewRestoration = () => {
     }
   }
 
-  const beforeUploadProps = {
-    showUploadList: false,
-    beforeUpload: (file) => {
-      const isImage = file.type.startsWith('image/')
-      if (!isImage) {
-        message.error('只能上传图片文件')
-        return false
-      }
-      const isLt50M = file.size / 1024 / 1024 < 50
-      if (!isLt50M) {
-        message.error('图片大小不能超过50MB')
-        return false
-      }
-      handleUploadPhoto(file, 'before')
-      return false
-    },
-  }
-
-  const afterUploadProps = {
-    showUploadList: false,
-    beforeUpload: (file) => {
-      const isImage = file.type.startsWith('image/')
-      if (!isImage) {
-        message.error('只能上传图片文件')
-        return false
-      }
-      const isLt50M = file.size / 1024 / 1024 < 50
-      if (!isLt50M) {
-        message.error('图片大小不能超过50MB')
-        return false
-      }
-      handleUploadPhoto(file, 'after')
-      return false
-    },
+  const handleRetry = (type) => {
+    const file = type === 'before' ? currentBeforeFile : currentAfterFile
+    if (file) {
+      handleUploadPhoto(file, type)
+    }
   }
 
   const onFinish = async (values) => {
+    if (beforeError || afterError) {
+      message.warning('照片上传存在问题，请先修复后重试')
+      return
+    }
     setLoading(true)
     try {
       const payload = {
@@ -212,11 +311,7 @@ const NewRestoration = () => {
           >
             <TextArea
               rows={6}
-              placeholder="请详细记录修复操作过程，包括：
-1. 文物损坏情况描述
-2. 采取的修复措施和步骤
-3. 使用的工具和技术方法
-4. 修复过程中的重要发现等..."
+              placeholder="请详细记录修复操作过程，包括：&#10;1. 文物损坏情况描述&#10;2. 采取的修复措施和步骤&#10;3. 使用的工具和技术方法&#10;4. 修复过程中的重要发现等..."
             />
           </Form.Item>
 
@@ -224,79 +319,36 @@ const NewRestoration = () => {
             <div style={{ fontWeight: 500, marginBottom: 12 }}>
               <CameraOutlined style={{ marginRight: 4 }} />
               照片上传
+              <span style={{ fontWeight: 'normal', color: '#999', fontSize: 12, marginLeft: 8 }}>
+                （大文件自动分片上传，上传后自动校验完整性）
+              </span>
             </div>
             <Row gutter={24}>
               <Col xs={24} md={12}>
-                <Card
-                  size="small"
+                <PhotoUploadCard
                   title="修复前照片"
-                  extra={
-                    <Upload {...beforeUploadProps}>
-                      <Button
-                        icon={<UploadOutlined />}
-                        loading={uploadingBefore}
-                        type="primary"
-                        size="small"
-                      >
-                        上传照片
-                      </Button>
-                    </Upload>
-                  }
-                  style={{ minHeight: 220 }}
-                >
-                  {beforePreview || beforePhotoPath ? (
-                    <img
-                      src={beforePreview || getPhotoUrl(beforePhotoPath)}
-                      alt="修复前"
-                      style={{ width: '100%', maxHeight: 200, objectFit: 'contain' }}
-                    />
-                  ) : (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#999',
-                      padding: '40px 0',
-                      fontSize: 14
-                    }}>
-                      暂无照片
-                    </div>
-                  )}
-                </Card>
+                  type="before"
+                  photoPath={beforePhotoPath}
+                  preview={beforePreview}
+                  uploading={uploadingBefore}
+                  progress={beforeProgress}
+                  uploadError={beforeError}
+                  onUpload={(file) => handleUploadPhoto(file, 'before')}
+                  onRetry={() => handleRetry('before')}
+                />
               </Col>
               <Col xs={24} md={12}>
-                <Card
-                  size="small"
+                <PhotoUploadCard
                   title="修复后照片"
-                  extra={
-                    <Upload {...afterUploadProps}>
-                      <Button
-                        icon={<UploadOutlined />}
-                        loading={uploadingAfter}
-                        type="primary"
-                        size="small"
-                      >
-                        上传照片
-                      </Button>
-                    </Upload>
-                  }
-                  style={{ minHeight: 220 }}
-                >
-                  {afterPreview || afterPhotoPath ? (
-                    <img
-                      src={afterPreview || getPhotoUrl(afterPhotoPath)}
-                      alt="修复后"
-                      style={{ width: '100%', maxHeight: 200, objectFit: 'contain' }}
-                    />
-                  ) : (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#999',
-                      padding: '40px 0',
-                      fontSize: 14
-                    }}>
-                      暂无照片
-                    </div>
-                  )}
-                </Card>
+                  type="after"
+                  photoPath={afterPhotoPath}
+                  preview={afterPreview}
+                  uploading={uploadingAfter}
+                  progress={afterProgress}
+                  uploadError={afterError}
+                  onUpload={(file) => handleUploadPhoto(file, 'after')}
+                  onRetry={() => handleRetry('after')}
+                />
               </Col>
             </Row>
           </div>

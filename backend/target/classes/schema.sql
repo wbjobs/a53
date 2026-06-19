@@ -39,8 +39,21 @@ CREATE TABLE IF NOT EXISTS restoration_records (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建索引
+-- 基础索引
 CREATE INDEX IF NOT EXISTS idx_relics_relic_no ON relics(relic_no);
+
+-- 复合索引：按文物查询修复记录并按日期排序（最频繁的查询场景）
+CREATE INDEX IF NOT EXISTS idx_restorations_relic_date
+    ON restoration_records(relic_id, restoration_date DESC);
+
+-- 复合索引：按修复师查询修复记录并按日期排序
+CREATE INDEX IF NOT EXISTS idx_restorations_restorer_date
+    ON restoration_records(restorer_id, restoration_date DESC);
+
+-- 全表按日期排序查询的索引
+CREATE INDEX IF NOT EXISTS idx_restorations_date_desc
+    ON restoration_records(restoration_date DESC);
+
+-- 单列索引（兼容旧查询）
 CREATE INDEX IF NOT EXISTS idx_restorations_relic_id ON restoration_records(relic_id);
 CREATE INDEX IF NOT EXISTS idx_restorations_restorer_id ON restoration_records(restorer_id);
-CREATE INDEX IF NOT EXISTS idx_restorations_date ON restoration_records(restoration_date);

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/restorations")
@@ -29,8 +30,10 @@ public class RestorationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<RestorationResponse>> getAll() {
-        return ResponseEntity.ok(restorationService.getAllRecords());
+    public ResponseEntity<Map<String, Object>> getAllPaged(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        return ResponseEntity.ok(restorationService.getAllRecordsPaged(page, size));
     }
 
     @GetMapping("/relic/{relicId}")
@@ -44,7 +47,10 @@ public class RestorationController {
     }
 
     @GetMapping("/restorer/{restorerId}")
-    public ResponseEntity<List<RestorationResponse>> getByRestorerId(@PathVariable Long restorerId) {
+    public ResponseEntity<List<RestorationResponse>> getByRestorerId(
+            @PathVariable Long restorerId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         return ResponseEntity.ok(restorationService.getRecordsByRestorerId(restorerId));
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Table, Input, Button, Space, Tag, message } from 'antd'
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
@@ -10,29 +10,37 @@ const AllRestorations = () => {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchText, setSearchText] = useState('')
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  })
   const navigate = useNavigate()
   const { user, isAdmin } = useAuth()
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async (page = 1, size = 20) => {
     setLoading(true)
     try {
-      let response
-      if (isAdmin()) {
-        response = await api.get('/restorations')
-      } else {
-        response = await api.get(`/restorations/restorer/${user.userId}`)
-      }
-      setRecords(response.data)
+      const response = await api.get('/restorations', {
+        params: { page: page - 1, size }
+      })
+      const data = response.data
+      setRecords(data.content || [])
+      setPagination({
+        current: data.currentPage + 1,
+        pageSize: data.pageSize,
+        total: data.totalElements,
+      })
     } catch (error) {
       message.error('加载修复记录失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchRecords()
-  }, [])
+  }, [fetchRecords])
 
   const filteredRecords = records.filter(record =>
     record.relicNo.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -128,10 +136,13 @@ const AllRestorations = () => {
         rowKey="id"
         loading={loading}
         pagination={{
-          pageSize: 10,
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total) => `共 ${total} 条记录`,
+          onChange: (page, pageSize) => fetchRecords(page, pageSize),
         }}
       />
     </div>
