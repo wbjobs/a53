@@ -1,0 +1,92 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f0e8;
+}
+
+.timeline-content {
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.photo-compare {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.photo-compare .photo-item {
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+}
+
+.photo-compare .photo-item img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+}
+
+.photo-compare .photo-label {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+}
+
+.login-card {
+  width: 400px;
+  padding: 40px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.login-title {
+  text-align: center;
+  margin-bottom: 32px;
+  color: #8B4513;
+}
+
+.detail-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.detail-info .info-item {
+  padding: 12px;
+  background: #fafaf5;
+  border-radius: 6px;
+}
+
+.detail-info .info-label {
+  color: #999;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.detail-info .info-value {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+}
