@@ -6,8 +6,10 @@ com\museum\relic\service\RelicService.class
 com\museum\relic\entity\RestorationRecord.class
 com\museum\relic\dto\LoginResponse$LoginResponseBuilder.class
 com\museum\relic\config\GlobalExceptionHandler.class
+com\museum\relic\dto\PhotoDTO$PhotoDTOBuilder.class
 com\museum\relic\entity\RestorationRecord$RestorationRecordBuilder.class
 com\museum\relic\repository\RelicRepository.class
+com\museum\relic\repository\RestorationPhotoRepository.class
 com\museum\relic\controller\RestorationController.class
 com\museum\relic\dto\LoginResponse.class
 com\museum\relic\config\DataInitializer.class
@@ -22,6 +24,7 @@ com\museum\relic\controller\AuthController.class
 com\museum\relic\config\MinioConfig.class
 com\museum\relic\service\AuthService.class
 com\museum\relic\config\SecurityConfig.class
+com\museum\relic\entity\RestorationPhoto$RestorationPhotoBuilder.class
 com\museum\relic\dto\RelicRequest.class
 com\museum\relic\controller\PhotoController.class
 com\museum\relic\RelicRestorationApplication.class
@@ -30,6 +33,8 @@ com\museum\relic\security\JwtUtil.class
 com\museum\relic\dto\LoginRequest.class
 com\museum\relic\entity\UserRole.class
 com\museum\relic\security\CustomUserDetailsService.class
+com\museum\relic\entity\RestorationPhoto.class
 com\museum\relic\service\RestorationService.class
+com\museum\relic\dto\PhotoDTO.class
 com\museum\relic\entity\User$UserBuilder.class
 com\museum\relic\entity\Relic.class

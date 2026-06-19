@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -29,6 +31,34 @@ public class PhotoController {
         Map<String, String> response = new HashMap<>();
         response.put("path", objectName);
         response.put("url", minioService.getPhotoUrl(objectName));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/batch-upload")
+    public ResponseEntity<Map<String, Object>> uploadPhotosBatch(
+            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam(value = "prefix", defaultValue = "process") String prefix) {
+        List<String> paths = minioService.uploadPhotosBatch(files, prefix);
+        List<String> urls = new ArrayList<>();
+        for (String path : paths) {
+            urls.add(minioService.getPhotoUrl(path));
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("paths", paths);
+        response.put("urls", urls);
+        response.put("count", paths.size());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/upload-document")
+    public ResponseEntity<Map<String, String>> uploadDocument(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "prefix", defaultValue = "solutions") String prefix) {
+        String objectName = minioService.uploadDocument(file, prefix);
+        Map<String, String> response = new HashMap<>();
+        response.put("path", objectName);
+        response.put("url", minioService.getPhotoUrl(objectName));
+        response.put("fileName", file.getOriginalFilename());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

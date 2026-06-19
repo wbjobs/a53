@@ -79,4 +79,44 @@ export const uploadPhotoWithRetry = async (file, prefix, onProgress, maxRetries 
   throw lastError
 }
 
+export const uploadPhotosBatch = async (files, prefix, onProgress) => {
+  const formData = new FormData()
+  files.forEach(file => {
+    formData.append('files', file)
+  })
+  formData.append('prefix', prefix)
+
+  const response = await api.post('/photos/batch-upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        onProgress(percent)
+      }
+    },
+    timeout: 600000,
+  })
+
+  return response.data
+}
+
+export const uploadDocument = async (file, prefix, onProgress) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('prefix', prefix)
+
+  const response = await api.post('/photos/upload-document', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        onProgress(percent)
+      }
+    },
+    timeout: 300000,
+  })
+
+  return response.data
+}
+
 export default api

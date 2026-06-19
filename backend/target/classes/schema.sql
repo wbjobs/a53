@@ -35,7 +35,19 @@ CREATE TABLE IF NOT EXISTS restoration_records (
     operations TEXT NOT NULL,
     before_photo_path VARCHAR(500),
     after_photo_path VARCHAR(500),
+    solution_file_path VARCHAR(500),
+    solution_file_name VARCHAR(255),
     notes TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 修复过程照片表
+CREATE TABLE IF NOT EXISTS restoration_photos (
+    id SERIAL PRIMARY KEY,
+    record_id BIGINT NOT NULL REFERENCES restoration_records(id) ON DELETE CASCADE,
+    photo_path VARCHAR(500) NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    photo_name VARCHAR(255),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -57,3 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_restorations_date_desc
 -- 单列索引（兼容旧查询）
 CREATE INDEX IF NOT EXISTS idx_restorations_relic_id ON restoration_records(relic_id);
 CREATE INDEX IF NOT EXISTS idx_restorations_restorer_id ON restoration_records(restorer_id);
+
+-- 修复过程照片索引
+CREATE INDEX IF NOT EXISTS idx_photos_record_sort
+    ON restoration_photos(record_id, sort_order);

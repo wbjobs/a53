@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -24,6 +25,10 @@ public class RestorationResponse {
     private String operations;
     private String beforePhotoPath;
     private String afterPhotoPath;
+    private List<PhotoDTO> processPhotos;
+    private String solutionFilePath;
+    private String solutionFileName;
+    private String solutionFileUrl;
     private String notes;
     private LocalDateTime createdAt;
 }

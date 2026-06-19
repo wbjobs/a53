@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -26,6 +27,12 @@ public class RestorationRequest {
     private String beforePhotoPath;
 
     private String afterPhotoPath;
+
+    private List<String> processPhotoPaths;
+
+    private String solutionFilePath;
+
+    private String solutionFileName;
 
     private String notes;
 }

@@ -14,9 +14,10 @@ import java.util.Optional;
 @Repository
 public interface RestorationRecordRepository extends JpaRepository<RestorationRecord, Long> {
 
-    @Query("SELECT r FROM RestorationRecord r " +
+    @Query("SELECT DISTINCT r FROM RestorationRecord r " +
            "JOIN FETCH r.relic " +
            "JOIN FETCH r.restorer " +
+           "LEFT JOIN FETCH r.processPhotos " +
            "WHERE r.relic.id = :relicId " +
            "ORDER BY r.restorationDate DESC")
     List<RestorationRecord> findByRelicIdWithFetch(@Param("relicId") Long relicId);
@@ -43,6 +44,7 @@ public interface RestorationRecordRepository extends JpaRepository<RestorationRe
     @Query("SELECT r FROM RestorationRecord r " +
            "JOIN FETCH r.relic " +
            "JOIN FETCH r.restorer " +
+           "LEFT JOIN FETCH r.processPhotos " +
            "WHERE r.id = :id")
-    Optional<RestorationRecord> findByIdWithFetch(@Param("id") Long id);
+    Optional<RestorationRecord> findByIdWithPhotos(@Param("id") Long id);
 }

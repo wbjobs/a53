@@ -1,8 +1,10 @@
 package com.museum.relic.service;
 
+import com.museum.relic.dto.PhotoDTO;
 import com.museum.relic.dto.RestorationRequest;
 import com.museum.relic.dto.RestorationResponse;
 import com.museum.relic.entity.Relic;
+import com.museum.relic.entity.RestorationPhoto;
 import com.museum.relic.entity.RestorationRecord;
 import com.museum.relic.entity.User;
 import com.museum.relic.repository.RelicRepository;
@@ -17,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,7 @@ public class RestorationService {
     private final RestorationRecordRepository recordRepository;
     private final RelicRepository relicRepository;
     private final UserRepository userRepository;
+    private final MinioService minioService;
 
     @Transactional
     public RestorationResponse createRecord(RestorationRequest request) {
@@ -47,16 +51,35 @@ public class RestorationService {
                 .operations(request.getOperations())
                 .beforePhotoPath(request.getBeforePhotoPath())
                 .afterPhotoPath(request.getAfterPhotoPath())
+                .solutionFilePath(request.getSolutionFilePath())
+                .solutionFileName(request.getSolutionFileName())
                 .notes(request.getNotes())
                 .build();
 
         record = recordRepository.save(record);
+
+        if (request.getProcessPhotoPaths() != null && !request.getProcessPhotoPaths().isEmpty()) {
+            List<RestorationPhoto> photos = new ArrayList<>();
+            for (int i = 0; i < request.getProcessPhotoPaths().size(); i++) {
+                String path = request.getProcessPhotoPaths().get(i);
+                RestorationPhoto photo = RestorationPhoto.builder()
+                        .record(record)
+                        .photoPath(path)
+                        .sortOrder(i)
+                        .photoName("过程照片" + (i + 1))
+                        .build();
+                photos.add(photo);
+            }
+            record.setProcessPhotos(photos);
+            record = recordRepository.save(record);
+        }
+
         return toResponse(record);
     }
 
     @Transactional(readOnly = true)
     public RestorationResponse getRecordById(Long id) {
-        RestorationRecord record = recordRepository.findByIdWithFetch(id)
+        RestorationRecord record = recordRepository.findByIdWithPhotos(id)
                 .orElseThrow(() -> new RuntimeException("修复记录不存在"));
         return toResponse(record);
     }
@@ -112,6 +135,24 @@ public class RestorationService {
     }
 
     private RestorationResponse toResponse(RestorationRecord record) {
+        List<PhotoDTO> processPhotos = null;
+        if (record.getProcessPhotos() != null && !record.getProcessPhotos().isEmpty()) {
+            processPhotos = record.getProcessPhotos().stream()
+                    .map(photo -> PhotoDTO.builder()
+                            .id(photo.getId())
+                            .photoPath(photo.getPhotoPath())
+                            .photoName(photo.getPhotoName())
+                            .sortOrder(photo.getSortOrder())
+                            .url(minioService.getPhotoUrl(photo.getPhotoPath()))
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        String solutionFileUrl = null;
+        if (record.getSolutionFilePath() != null) {
+            solutionFileUrl = minioService.getPhotoUrl(record.getSolutionFilePath());
+        }
+
         return RestorationResponse.builder()
                 .id(record.getId())
                 .relicId(record.getRelic().getId())
@@ -124,6 +165,10 @@ public class RestorationService {
                 .operations(record.getOperations())
                 .beforePhotoPath(record.getBeforePhotoPath())
                 .afterPhotoPath(record.getAfterPhotoPath())
+                .processPhotos(processPhotos)
+                .solutionFilePath(record.getSolutionFilePath())
+                .solutionFileName(record.getSolutionFileName())
+                .solutionFileUrl(solutionFileUrl)
                 .notes(record.getNotes())
                 .createdAt(record.getCreatedAt())
                 .build();

@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -46,8 +48,17 @@ public class RestorationRecord {
 
     private String afterPhotoPath;
 
+    private String solutionFilePath;
+
+    private String solutionFileName;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @OneToMany(mappedBy = "record", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    @Builder.Default
+    private List<RestorationPhoto> processPhotos = new ArrayList<>();
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

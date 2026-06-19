@@ -1,12 +1,104 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Descriptions, Timeline, Tag, Spin, Empty, Button, Image, Divider, Typography } from 'antd'
-import { ArrowLeftOutlined, PlusOutlined, CameraOutlined } from '@ant-design/icons'
+import { Descriptions, Timeline, Tag, Spin, Empty, Button, Image, Divider, Typography, List, Card } from 'antd'
+import {
+  ArrowLeftOutlined,
+  PlusOutlined,
+  CameraOutlined,
+  FilePdfOutlined,
+  FileWordOutlined,
+  PaperClipOutlined,
+  DownloadOutlined
+} from '@ant-design/icons'
 import api, { getPhotoUrl } from '../utils/api'
 import dayjs from 'dayjs'
 import { useAuth } from '../context/AuthContext'
 
 const { Title, Paragraph } = Typography
+
+const PhotoGallery = ({ photos, recordId }) => {
+  if (!photos || photos.length === 0) return null
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={{ color: '#666', marginBottom: 8, fontWeight: 500 }}>
+        <CameraOutlined style={{ marginRight: 4 }} />
+        过程照片序列
+        <Tag color="blue" style={{ marginLeft: 8 }}>{photos.length} 张</Tag>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <Image.PreviewGroup>
+          {photos.map((photo, index) => (
+            <div key={photo.id || index} style={{ position: 'relative' }}>
+              <Image
+                width={100}
+                height={100}
+                src={photo.url || getPhotoUrl(photo.photoPath)}
+                alt={photo.photoName || `过程照片${index + 1}`}
+                style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+              />
+              <div style={{
+                position: 'absolute',
+                bottom: 2,
+                left: 2,
+                background: 'rgba(0,0,0,0.6)',
+                color: '#fff',
+                fontSize: 10,
+                padding: '1px 6px',
+                borderRadius: 2
+              }}>
+                #{index + 1}
+              </div>
+            </div>
+          ))}
+        </Image.PreviewGroup>
+      </div>
+    </div>
+  )
+}
+
+const SolutionFile = ({ fileName, filePath, fileUrl }) => {
+  if (!filePath) return null
+
+  const getFileIcon = (name) => {
+    if (!name) return <FileWordOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+    if (name.toLowerCase().endsWith('.pdf')) return <FilePdfOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />
+    return <FileWordOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+  }
+
+  const handleDownload = () => {
+    const url = fileUrl || getPhotoUrl(filePath)
+    window.open(url, '_blank')
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={{ color: '#666', marginBottom: 8, fontWeight: 500 }}>
+        <PaperClipOutlined style={{ marginRight: 4 }} />
+        修复方案文档
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 14px',
+          background: '#f0f5ff',
+          border: '1px solid #adc6ff',
+          borderRadius: 6,
+          cursor: 'pointer'
+        }}
+        onClick={handleDownload}
+      >
+        {getFileIcon(fileName)}
+        <div style={{ flex: 1, marginLeft: 10 }}>
+          <div style={{ fontWeight: 500, color: '#1d39c4' }}>{fileName || '修复方案文档'}</div>
+          <div style={{ fontSize: 12, color: '#8c8c8c' }}>点击查看 / 下载</div>
+        </div>
+        <DownloadOutlined style={{ color: '#8c8c8c' }} />
+      </div>
+    </div>
+  )
+}
 
 const RelicDetail = () => {
   const { id } = useParams()
@@ -169,6 +261,14 @@ const RelicDetail = () => {
                     </div>
                   </div>
                 )}
+
+                <PhotoGallery photos={record.processPhotos} recordId={record.id} />
+
+                <SolutionFile
+                  fileName={record.solutionFileName}
+                  filePath={record.solutionFilePath}
+                  fileUrl={record.solutionFileUrl}
+                />
               </div>
             ),
           }))}

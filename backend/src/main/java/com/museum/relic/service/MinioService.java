@@ -10,6 +10,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -45,6 +47,61 @@ public class MinioService {
         } catch (Exception e) {
             log.error("上传照片失败", e);
             throw new RuntimeException("上传照片失败: " + e.getMessage());
+        }
+    }
+
+    public List<String> uploadPhotosBatch(List<MultipartFile> files, String prefix) {
+        ensureBucketExists();
+        List<String> paths = new ArrayList<>();
+
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile file = files.get(i);
+            try {
+                String originalFilename = file.getOriginalFilename();
+                String extension = "";
+                if (originalFilename != null && originalFilename.contains(".")) {
+                    extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                }
+                String objectName = prefix + "/" + UUID.randomUUID() + extension;
+
+                byte[] fileData = file.getBytes();
+                String clientMd5 = computeMd5(fileData);
+
+                uploadWithRetry(file, objectName, fileData);
+                verifyIntegrity(objectName, clientMd5);
+
+                paths.add(objectName);
+                log.info("批量上传进度: {}/{}", i + 1, files.size());
+            } catch (Exception e) {
+                log.error("批量上传第{}张照片失败", i + 1, e);
+                throw new RuntimeException("批量上传失败，第" + (i + 1) + "张照片: " + e.getMessage());
+            }
+        }
+
+        return paths;
+    }
+
+    public String uploadDocument(MultipartFile file, String prefix) {
+        try {
+            ensureBucketExists();
+
+            String originalFilename = file.getOriginalFilename();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String objectName = prefix + "/" + UUID.randomUUID() + extension;
+
+            byte[] fileData = file.getBytes();
+            String clientMd5 = computeMd5(fileData);
+
+            uploadWithRetry(file, objectName, fileData);
+            verifyIntegrity(objectName, clientMd5);
+
+            return objectName;
+        } catch (Exception e) {
+            log.error("上传文档失败", e);
+            throw new RuntimeException("上传文档失败: " + e.getMessage());
         }
     }
 
